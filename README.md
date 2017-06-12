@@ -40,7 +40,7 @@ setup(
 You then need a `rust/` folder that has a Rust library (with a crate type
 of `cdylib`) and a `example/` python package.
 
-Example `__init__.py` file:
+Example `example/__init__.py` file:
 
 ```python
 from example._native import ffi, lib
