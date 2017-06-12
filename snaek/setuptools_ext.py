@@ -21,11 +21,11 @@ except ImportError:
     bdist_wheel = None
 
 
-EMPTY_C = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'empty.c')
-BINDGEN = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                       'bin', 'cbindgen')
-
+here = os.path.abspath(os.path.dirname(__file__))
+EMPTY_C = os.path.join(here, 'empty.c')
+BINDGEN = os.path.join(here, 'bin', 'cbindgen')
 EXT_EXT = sys.platform == 'darwin' and '.dylib' or '.so'
+
 BUILD_PY = u'''
 import re, sys, subprocess, cffi
 
@@ -33,6 +33,7 @@ header = subprocess.Popen(
     [%(bindgen)r, '--lang=c', '-o', '/dev/stdout', %(crate_path)r],
     stdout=subprocess.PIPE
 ).communicate()[0]
+print header
 
 header = re.compile(r'^\s*#.*?$(?m)').sub('', header)
 if sys.version_info >= (3, 0):
@@ -43,13 +44,12 @@ ffi.cdef(header)
 ffi.set_source(%(cffi_module_path)r, None)
 '''
 MODULE_PY = u'''# auto-generated file
+__all__ = ['lib', 'ffi']
+
 import os
 from %(cffi_module_path)s import ffi
-lib = ffi.dlopen(os.path.join(
-    os.path.dirname(__file__),
-    %(rust_lib_filename)r))
-
-__all__ = ['lib', 'ffi']
+lib = ffi.dlopen(os.path.join(os.path.dirname(__file__), %(rust_lib_filename)r))
+del os
 '''
 
 
@@ -131,9 +131,41 @@ def make_module_def(value):
     return mod_def
 
 
+def build_rustlib(module_def, base_path):
+    log.info('building rust lib %s', module_def.module_path)
+    cmdline = ['cargo', 'build', '--release']
+    if not sys.stdout.isatty():
+        cmdline.append('--color=always')
+    rv = subprocess.Popen(cmdline, cwd=module_def.crate_path).wait()
+    if rv != 0:
+        sys.exit(rv)
+
+    src_path = os.path.join(module_def.crate_path, 'target', 'release')
+    for filename in os.listdir(src_path):
+        if filename.endswith(EXT_EXT):
+            shutil.copy2(os.path.join(src_path, filename),
+                         os.path.join(base_path, module_def.rust_lib_filename))
+            break
+    else:
+        # XXX: parse toml file to ensure that crate type is set
+        error('rust library did not generate a shared library.')
+
+    log.info('building python wrapper for %s', module_def.module_path)
+    with open(os.path.join(base_path, module_def.name + '.py'), 'wb') as f:
+        f.write(MODULE_PY % {
+            'cffi_module_path': module_def.cffi_module_path,
+            'rust_lib_filename': module_def.rust_lib_filename,
+        })
+
+
 def add_rust_module(dist, module):
     module_def = make_module_def(module)
 
+    # Because distutils was never intended to support other languages and
+    # this was never cleaned up, we need to generate a fake C module which
+    # we later override with our rust module.  This means we just compile
+    # an empty .c file into a Python module.  This will trick wheel and
+    # other systems into assuming our library has binary extensions.
     if dist.ext_modules is None:
         dist.ext_modules = []
     dist.ext_modules.append(Extension(module_def.fake_module_path,
@@ -142,44 +174,20 @@ def add_rust_module(dist, module):
     base_build_ext = dist.cmdclass.get('build_ext', build_ext)
     base_build_py = dist.cmdclass.get('build_py', build_py)
 
-    def build_rustlib(base_path):
-        log.info('building rust lib %s', module_def.module_path)
-        cmdline = ['cargo', 'build', '--release']
-        if not sys.stdout.isatty():
-            cmdline.append('--color=always')
-        rv = subprocess.Popen(cmdline, cwd=module_def.crate_path).wait()
-        if rv != 0:
-            sys.exit(rv)
-
-        src_path = os.path.join(module_def.crate_path, 'target', 'release')
-        for filename in os.listdir(src_path):
-            if filename.endswith(EXT_EXT):
-                shutil.copy2(os.path.join(src_path, filename),
-                             os.path.join(base_path, module_def.rust_lib_filename))
-                break
-        else:
-            # XXX: parse toml file to ensure that crate type is set
-            error('rust library did not generate a shared library.')
-
-        log.info('building python wrapper for %s', module_def.module_path)
-        with open(os.path.join(base_path, module_def.name + '.py'), 'wb') as f:
-            f.write(MODULE_PY % {
-                'cffi_module_path': module_def.cffi_module_path,
-                'rust_lib_filename': module_def.rust_lib_filename,
-            })
-
     class SnaekBuildPy(base_build_py):
         def run(self):
             base_build_py.run(self)
-            build_rustlib(os.path.join(self.build_lib,
-                                       *module_def.module_base_path.split('.')))
+            build_rustlib(module_def, os.path.join(
+                self.build_lib, *module_def.module_base_path.split('.')))
 
     class SnaekBuildExt(base_build_ext):
         def run(self):
             base_build_ext.run(self)
             if self.inplace:
                 build_py = self.get_finalized_command('build_py')
-                build_rustlib(build_py.get_package_dir(module_def.module_base_path))
+                build_rustlib(
+                    module_def,
+                    build_py.get_package_dir(module_def.module_base_path))
 
     dist.cmdclass['build_py'] = SnaekBuildPy
     dist.cmdclass['build_ext'] = SnaekBuildExt
