@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.dist import Distribution
 
 # Dogfood ourselves here.  Since however we at this point might not be
@@ -24,8 +24,10 @@ setup(
     version='0.1.0',
     author='Armin Ronacher',
     author_email='armin.ronacher@active-4.com',
-    packages=find_packages(),
-    include_package_data=True,
+    packages=['snaek'],
+    package_data={
+        'snaek': ['empty.c'],
+    },
     description='A python library for distributing Rust modules.',
     zip_safe=False,
     platforms='any',
