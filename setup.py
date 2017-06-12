@@ -21,7 +21,7 @@ else:
 
 setup(
     name='snaek',
-    version='0.0.1',
+    version='0.1.0',
     author='Armin Ronacher',
     author_email='armin.ronacher@active-4.com',
     packages=find_packages(),
