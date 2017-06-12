@@ -1,2 +1,4 @@
 include MANIFEST.in LICENSE README.md Cargo.toml
 recursive-include snaek *
+recursive-include rust *
+recursive-exclude rust/target *
