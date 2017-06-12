@@ -8,10 +8,10 @@ typedef struct {
   char *msg;
 } BindgenError;
 
-void cbindgen_clear_err(BindgenError *err);
+void bindgen_clear_err(BindgenError *err);
 
-void cbindgen_free_string(char *s);
+void bindgen_free_string(char *s);
 
-char* cbindgen_generate_headers(const char *path, BindgenError *err_out);
+char* bindgen_generate_headers(const char *path, BindgenError *err_out);
 
-void cbindgen_init();
+void bindgen_init();
