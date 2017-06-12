@@ -47,13 +47,13 @@ unsafe fn landingpad<F: FnOnce() -> Result<T, Box<Error>> + panic::UnwindSafe, T
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cbindgen_init() {
+pub unsafe extern "C" fn bindgen_init() {
     fn silent_panic_handler(_pi: &panic::PanicInfo) {}
     panic::set_hook(Box::new(silent_panic_handler));
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cbindgen_clear_err(err: *mut BindgenError) {
+pub unsafe extern "C" fn bindgen_clear_err(err: *mut BindgenError) {
     if !(*err).msg.is_null() {
         CString::from_raw((*err).msg);
         (*err).msg = ptr::null_mut();
@@ -61,7 +61,7 @@ pub unsafe extern "C" fn cbindgen_clear_err(err: *mut BindgenError) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cbindgen_generate_headers(
+pub unsafe extern "C" fn bindgen_generate_headers(
     path: *const c_char, err_out: *mut BindgenError) -> *mut c_char
 {
     landingpad(|| {
@@ -77,7 +77,7 @@ pub unsafe extern "C" fn cbindgen_generate_headers(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cbindgen_free_string(
+pub unsafe extern "C" fn bindgen_free_string(
     s: *mut c_char)
 {
     if !s.is_null() {

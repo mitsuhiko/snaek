@@ -15,7 +15,7 @@ else:
         def __init__(self, *args, **kwargs):
             Distribution.__init__(self, *args, **kwargs)
             setuptools_ext.snaek_rust_modules(self, 'snaek_rust_modules', [
-                ('snaek._native', 'rust/'),
+                ('snaek._bindgen', 'rust/'),
             ])
     extra['distclass'] = SneakDistribution
 

@@ -26,7 +26,8 @@ EMPTY_C = os.path.join(here, 'empty.c')
 EXT_EXT = sys.platform == 'darwin' and '.dylib' or '.so'
 
 BUILD_PY = u'''
-from snaek.bindgen import make_ffi
+import cffi
+from snaek.ffi import make_ffi
 ffi = make_ffi(%(cffi_module_path)r, %(crate_path)r, %(cached_header_filename)r)
 '''
 MODULE_PY = u'''# auto-generated file
