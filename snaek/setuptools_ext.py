@@ -1,12 +1,15 @@
 import os
+import re
 import sys
 import uuid
+import json
 import shutil
 import atexit
 import tempfile
 import sysconfig
 import subprocess
 
+from distutils import log
 from distutils.core import Extension
 from distutils.command.build_py import build_py
 from distutils.command.build_ext import build_ext
@@ -19,12 +22,15 @@ except ImportError:
 
 
 EMPTY_C = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'empty.c')
+BINDGEN = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                       'bin', 'cbindgen')
+
 EXT_EXT = sys.platform == 'darwin' and '.dylib' or '.so'
 BUILD_PY = u'''
 import re, sys, subprocess, cffi
 
 header = subprocess.Popen(
-    ['cbindgen', '--lang=c', '-o', '/dev/stdout', %(crate_path)r],
+    [%(bindgen)r, '--lang=c', '-o', '/dev/stdout', %(crate_path)r],
     stdout=subprocess.PIPE
 ).communicate()[0]
 
@@ -71,7 +77,9 @@ class ModuleDef(object):
         self.fake_module_path = '%s__lib' % genbase
 
     def get_cffi_build_path(self):
+        log.info('generating cffi build script for %s', self.module_path)
         build_script = BUILD_PY % {
+            'bindgen': BINDGEN,
             'crate_path': self.crate_path,
             'cffi_module_path': self.cffi_module_path,
         }
@@ -107,6 +115,19 @@ def make_module_def(value):
     if not os.path.isfile(mod_def.toml_path):
         error('module %s does not have a Cargo.toml file' % mod_def.name)
 
+    _crate_type_re = re.compile(r'^\s*crate-type\s*=\s*(.*?)\s*$(?m)')
+    with open(mod_def.toml_path) as f:
+        for line in f:
+            match = _crate_type_re.match(line)
+            if match is None:
+                continue
+            if 'cdylib' not in match.group(1):
+                error('crate-type needs to be set to cdylib but is set to %s'
+                      % match.group(1))
+            break
+        else:
+            error('crate-type needs to be set to cdylib but is missing')
+
     return mod_def
 
 
@@ -122,6 +143,7 @@ def add_rust_module(dist, module):
     base_build_py = dist.cmdclass.get('build_py', build_py)
 
     def build_rustlib(base_path):
+        log.info('building rust lib %s', module_def.module_path)
         cmdline = ['cargo', 'build', '--release']
         if not sys.stdout.isatty():
             cmdline.append('--color=always')
@@ -139,6 +161,7 @@ def add_rust_module(dist, module):
             # XXX: parse toml file to ensure that crate type is set
             error('rust library did not generate a shared library.')
 
+        log.info('building python wrapper for %s', module_def.module_path)
         with open(os.path.join(base_path, module_def.name + '.py'), 'wb') as f:
             f.write(MODULE_PY % {
                 'cffi_module_path': module_def.cffi_module_path,
@@ -187,6 +210,7 @@ def snaek_universal(dist, attr, value):
     if not value or bdist_wheel is None:
         return
 
+    log.info('enabling universal wheel mode')
     base_bdist_wheel = dist.cmdclass.get('bdist_wheel', bdist_wheel)
 
     class SnaekBdistWheel(base_bdist_wheel):
