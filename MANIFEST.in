@@ -1,0 +1,2 @@
+include MANIFEST.in LICENSE README.md Cargo.toml
+recursive-include snaek *
