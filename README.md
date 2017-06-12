@@ -16,6 +16,15 @@ In particular you will most likely only need two wheels for Linux, one for macs
 and soon one for Windows independently of how many Python interpreters you want
 to target.
 
+## What is supported?
+
+* Platforms: Linux, Mac (Windows later)
+* setuptools commands: `bdist_wheel`, `build`, `build_ext`, `develop`
+* `pip install --editable .`
+* Universal wheels (`PACKAGE-py2.py3-none-PLATFORM.whl`); this can be disabled
+  with `snaek_universal=False` in `setup()` in case the package also contains
+  stuff that does link against libpython.
+
 ## How?
 
 This is what a `setup.py` file looks like:
