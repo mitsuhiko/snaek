@@ -12,6 +12,5 @@ setup(
     ],
     snaek_rust_modules=[
         ('example._native', 'rust/'),
-    ],
-    snaek_universal=True,
+    ]
 )

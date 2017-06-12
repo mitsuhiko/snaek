@@ -48,7 +48,12 @@ __all__ = ['lib', 'ffi']
 import os
 from %(cffi_module_path)s import ffi
 lib = ffi.dlopen(os.path.join(os.path.dirname(__file__), %(rust_lib_filename)r))
-del os
+_attr = None
+
+for _attr in dir(lib):
+    locals()[_attr] = getattr(lib, _attr)
+
+del os, _attr
 '''
 
 
@@ -196,6 +201,8 @@ def add_rust_module(dist, module):
 
 def snaek_rust_modules(dist, attr, value):
     assert attr == 'snaek_rust_modules'
+    patch_universal_wheel(dist)
+
     if value is None:
         value = []
     elif isinstance(value, basestring):
@@ -214,14 +221,25 @@ def snaek_rust_modules(dist, attr, value):
 
 def snaek_universal(dist, attr, value):
     assert attr == 'snaek_universal'
-    if not value or bdist_wheel is None:
-        return
+    patch_universal_wheel(dist)
+    dist.snaek_universal = value
 
-    log.info('enabling universal wheel mode')
+
+def patch_universal_wheel(dist):
+    value = getattr(dist, 'snaek_universal', None)
+    if value is None:
+        dist.snaek_universal = True
+
     base_bdist_wheel = dist.cmdclass.get('bdist_wheel', bdist_wheel)
+
+    if base_bdist_wheel is None:
+        return
 
     class SnaekBdistWheel(base_bdist_wheel):
         def get_tag(self):
-            return ('py2.py3', 'none',) + base_bdist_wheel.get_tag(self)[2:]
+            rv = base_bdist_wheel.get_tag(self)
+            if not dist.snaek_universal:
+                return rv
+            return ('py2.py3', 'none',) + rv[2:]
 
     dist.cmdclass['bdist_wheel'] = SnaekBdistWheel

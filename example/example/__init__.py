@@ -1,6 +1,6 @@
-from ._native import lib
+from . import _native
 
 
 def test():
-    point = lib.example_get_origin()
+    point = _native.example_get_origin()
     return (point.x, point.y)

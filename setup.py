@@ -3,8 +3,11 @@ from setuptools import setup, find_packages
 setup(
     name='snaek',
     version='0.0.1',
+    author='Armin Ronacher',
+    author_email='armin.ronacher@active-4.com',
     packages=find_packages(),
     include_package_data=True,
+    description='A python library for distributing Rust modules.',
     zip_safe=False,
     platforms='any',
     install_requires=[
@@ -16,4 +19,8 @@ setup(
             'snaek_universal = snaek.setuptools_ext:snaek_universal',
         ],
     },
+    classifiers=[
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python',
+    ],
 )
