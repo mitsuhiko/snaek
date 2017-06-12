@@ -2,4 +2,5 @@ from ._native import lib
 
 
 def test():
-    return 'from rust: %d' % lib.example_demo()
+    point = lib.example_get_origin()
+    return (point.x, point.y)

@@ -33,7 +33,6 @@ header = subprocess.Popen(
     [%(bindgen)r, '--lang=c', '-o', '/dev/stdout', %(crate_path)r],
     stdout=subprocess.PIPE
 ).communicate()[0]
-print header
 
 header = re.compile(r'^\s*#.*?$(?m)').sub('', header)
 if sys.version_info >= (3, 0):
