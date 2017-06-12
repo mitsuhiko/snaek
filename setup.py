@@ -1,4 +1,23 @@
 from setuptools import setup, find_packages
+from setuptools.dist import Distribution
+
+# Dogfood ourselves here.  Since however we at this point might not be
+# installed yet we cannot use snaek_rust_modules directly.  Additionally
+# we might not be able to import outselves yet because the setup
+# requirements are not installed yet.  In that case do nothing.
+extra = {}
+try:
+    from snaek import setuptools_ext
+except ImportError:
+    pass
+else:
+    class SneakDistribution(Distribution):
+        def __init__(self, *args, **kwargs):
+            Distribution.__init__(self, *args, **kwargs)
+            setuptools_ext.snaek_rust_modules(self, 'snaek_rust_modules', [
+                ('snaek._native', 'rust/'),
+            ])
+    extra['distclass'] = SneakDistribution
 
 setup(
     name='snaek',
@@ -13,6 +32,9 @@ setup(
     install_requires=[
         'cffi>=1.6.0',
     ],
+    setup_requires=[
+        'cffi>=1.6.0',
+    ],
     entry_points={
         'distutils.setup_keywords': [
             'snaek_rust_modules = snaek.setuptools_ext:snaek_rust_modules',
@@ -23,4 +45,5 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
     ],
+    **extra
 )

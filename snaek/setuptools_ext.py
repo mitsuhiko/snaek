@@ -23,24 +23,11 @@ except ImportError:
 
 here = os.path.abspath(os.path.dirname(__file__))
 EMPTY_C = os.path.join(here, 'empty.c')
-BINDGEN = os.path.join(here, 'bin', 'cbindgen')
 EXT_EXT = sys.platform == 'darwin' and '.dylib' or '.so'
 
 BUILD_PY = u'''
-import re, sys, subprocess, cffi
-
-header = subprocess.Popen(
-    [%(bindgen)r, '--lang=c', '-o', '/dev/stdout', %(crate_path)r],
-    stdout=subprocess.PIPE
-).communicate()[0]
-
-header = re.compile(r'^\s*#.*?$(?m)').sub('', header)
-if sys.version_info >= (3, 0):
-    header = header.decode('utf-8')
-
-ffi = cffi.FFI()
-ffi.cdef(header)
-ffi.set_source(%(cffi_module_path)r, None)
+from snaek.bindgen import make_ffi
+ffi = make_ffi(%(cffi_module_path)r, %(crate_path)r, %(cached_header_filename)r)
 '''
 MODULE_PY = u'''# auto-generated file
 __all__ = ['lib', 'ffi']
@@ -48,12 +35,7 @@ __all__ = ['lib', 'ffi']
 import os
 from %(cffi_module_path)s import ffi
 lib = ffi.dlopen(os.path.join(os.path.dirname(__file__), %(rust_lib_filename)r))
-_attr = None
-
-for _attr in dir(lib):
-    locals()[_attr] = getattr(lib, _attr)
-
-del os, _attr
+del os
 '''
 
 
@@ -74,18 +56,19 @@ class ModuleDef(object):
 
         genbase = '%s._%s' % (parts[0], parts[1].lstrip('_'))
         self.cffi_module_path = '%s__ffi' % genbase
+        self.cached_header_filename = os.path.join(self.crate_path, 'header.h')
         self.rust_lib_filename = '%s__lib%s' % (
             genbase.split('.')[-1],
             sysconfig.get_config_var('SO') or '',
         )
         self.fake_module_path = '%s__lib' % genbase
 
-    def get_cffi_build_path(self):
+    def make_cffi_build_script(self):
         log.info('generating cffi build script for %s', self.module_path)
         build_script = BUILD_PY % {
-            'bindgen': BINDGEN,
             'crate_path': self.crate_path,
             'cffi_module_path': self.cffi_module_path,
+            'cached_header_filename': self.cached_header_filename,
         }
         fn = os.path.join(tempfile.gettempdir(), '._snaek-%s.py' % uuid.uuid4())
 
@@ -196,7 +179,7 @@ def add_rust_module(dist, module):
     dist.cmdclass['build_py'] = SnaekBuildPy
     dist.cmdclass['build_ext'] = SnaekBuildExt
 
-    return module_def
+    return module_def.make_cffi_build_script() + ':ffi'
 
 
 def snaek_rust_modules(dist, attr, value):
@@ -210,13 +193,12 @@ def snaek_rust_modules(dist, attr, value):
     else:
         value = list(value)
 
-    cffi_modules_defs = []
+    cffi_defs = []
     for rust_module in value:
-        cffi_modules_defs.append(
-            '%s:ffi' % add_rust_module(dist, rust_module).get_cffi_build_path())
+        cffi_defs.append(add_rust_module(dist, rust_module))
 
     # Register our dummy modules with cffi
-    cffi_modules(dist, 'cffi_modules', cffi_modules_defs)
+    cffi_modules(dist, 'cffi_modules', cffi_defs)
 
 
 def snaek_universal(dist, attr, value):

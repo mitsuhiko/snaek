@@ -1,0 +1,11 @@
+[package]
+name = "snaek"
+version = "0.1.0"
+authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
+
+[lib]
+name = "snaek"
+crate-type = ["cdylib"]
+
+[dependencies]
+cbindgen = "0.1.10"
