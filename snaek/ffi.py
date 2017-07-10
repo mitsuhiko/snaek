@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import cffi
 
 
@@ -16,6 +17,13 @@ def make_ffi(module_path, crate_path, cached_header_filename=None):
         from .bindgen import generate_header
         header = generate_header(crate_path)
     header = _directive_re.sub('', header)
+
+    if os.environ.get('SNAEK_DEBUG_HEADER') == '1':
+        sys.stderr.write('/* generated header for "%s" */\n' % module_path)
+        sys.stderr.write(header)
+        sys.stderr.write('\n')
+        sys.stderr.flush()
+
     ffi = cffi.FFI()
     ffi.cdef(header)
     ffi.set_source(module_path, None)
