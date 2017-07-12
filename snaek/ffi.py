@@ -3,6 +3,8 @@ import re
 import sys
 import cffi
 
+from ._compat import PY2
+
 
 _directive_re = re.compile(r'^\s*#.*?$(?m)')
 
@@ -13,6 +15,8 @@ def make_ffi(module_path, crate_path, cached_header_filename=None):
        os.path.isfile(cached_header_filename):
         with open(cached_header_filename, 'rb') as f:
             header = f.read()
+        if not PY2:
+            header = header.decode('utf-8')
     else:
         from .bindgen import generate_header
         header = generate_header(crate_path)

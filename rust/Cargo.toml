@@ -8,4 +8,4 @@ name = "snaek"
 crate-type = ["cdylib"]
 
 [dependencies]
-cbindgen = "0.1.10"
+cbindgen = "=0.1.10"

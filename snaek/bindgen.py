@@ -2,6 +2,7 @@ import os
 import sys
 
 from ._bindgen import lib, ffi
+from ._compat import PY2
 
 
 lib.bindgen_init()
@@ -23,7 +24,7 @@ def generate_header(crate_path):
     rv = rustcall(lib.bindgen_generate_headers, crate_path)
     header = ffi.string(rv)
     try:
-        if sys.version_info >= (3, 0):
+        if not PY2:
             header = header.decode('utf-8')
         return header
     finally:

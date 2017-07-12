@@ -15,6 +15,8 @@ from distutils.command.build_py import build_py
 from distutils.command.build_ext import build_ext
 from cffi.setuptools_ext import cffi_modules
 
+from ._compat import text_type
+
 try:
     from wheel.bdist_wheel import bdist_wheel
 except ImportError:
@@ -140,10 +142,10 @@ def build_rustlib(module_def, base_path):
 
     log.info('building python wrapper for %s', module_def.module_path)
     with open(os.path.join(base_path, module_def.name + '.py'), 'wb') as f:
-        f.write(MODULE_PY % {
+        f.write((MODULE_PY % {
             'cffi_module_path': module_def.cffi_module_path,
             'rust_lib_filename': module_def.rust_lib_filename,
-        })
+        }).encode('utf-8'))
 
 
 def add_rust_module(dist, module):
@@ -189,7 +191,7 @@ def snaek_rust_modules(dist, attr, value):
 
     if value is None:
         value = []
-    elif isinstance(value, basestring):
+    elif isinstance(value, (text_type, bytes)):
         value = [value]
     else:
         value = list(value)

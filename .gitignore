@@ -3,3 +3,5 @@ venv
 dist
 build
 snaek/_bindgen*
+__pycache__
+.eggs
