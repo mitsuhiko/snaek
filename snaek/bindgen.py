@@ -21,6 +21,8 @@ def rustcall(func, *args):
 
 
 def generate_header(crate_path):
+    if not PY2:
+        crate_path = crate_path.encode('utf-8')
     rv = rustcall(lib.bindgen_generate_headers, crate_path)
     header = ffi.string(rv)
     try:
