@@ -1,3 +1,13 @@
+**DEPRECATED**
+
+This project is (temporarily) deprecated in favour of [milksnake](https://github.com/getsentry/milksnake).
+
+Milksnake lets you do the same thing as snaek but does it on a lower level so
+that (until we can generate significantly higher level bindings to Python) we
+put more controls in the hands of the developer.
+
+-----------
+
 # Snaek
 
 Snaek is a Python library that helps you build Rust libraries and bridge them to
